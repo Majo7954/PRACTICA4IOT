@@ -1,81 +1,81 @@
 #include "Invernadero.h"
 
-Invernadero::Invernadero(WiFiClient& espClient, int sensorPin)
-    : client(espClient), sensor(sensorPin), fuegoDetectado(false), led(23), buzzer(5) {}
+Invernadero::Invernadero(WiFiClient& clienteWiFi, int pinSensor)
+    : cliente(clienteWiFi), sensor(pinSensor), fuegoDetectado(false), led(23), buzzer(5) {}
 
-void Invernadero::setupMQTT(const char* server, int port, const char* clientID) {
-    client.setServer(server, port);
-    if (client.connect(clientID)) {
+void Invernadero::configurarMQTT(const char* servidor, int puerto, const char* idCliente) {
+    cliente.setServer(servidor, puerto);
+    if (cliente.connect(idCliente)) {
         Serial.println("Conectado al broker MQTT con éxito.");
-        publish("invernadero/estado", "Conectado");
+        publicar("invernadero/estado", "Conectado");
     } else {
         Serial.print("Error de conexión al broker MQTT. Código: ");
-        Serial.println(client.state());
+        Serial.println(cliente.state());
     }
 }
 
-void Invernadero::setCallback(void (*callback)(char*, byte*, unsigned int)) {
-    client.setCallback(callback);
+void Invernadero::establecerCallback(void (*callback)(char*, byte*, unsigned int)) {
+    cliente.setCallback(callback);
 }
 
-void Invernadero::publish(const char* topic, const char* message) {
-    if (client.publish(topic, message)) {
+void Invernadero::publicar(const char* topico, const char* mensaje) {
+    if (cliente.publish(topico, mensaje)) {
         Serial.print("Mensaje enviado al tópico ");
-        Serial.print(topic);
+        Serial.print(topico);
         Serial.print(": ");
-        Serial.println(message);
+        Serial.println(mensaje);
     } else {
         Serial.println("Error al enviar mensaje MQTT.");
     }
 }
 
-void Invernadero::loop() {
-    if (!client.connected()) {
-        reconnect("invernadero/estado", "invernadero/control");
+void Invernadero::ejecutar() {
+    if (!cliente.connected()) {
+        reconectar("invernadero/estado", "invernadero/control");
     }
-    client.loop();
+    cliente.loop();
 }
 
-void Invernadero::checkFireSensor() {
-    bool valor = sensor.leer();
+void Invernadero::verificarSensorFuego() {
+    bool valor = sensor.leerSensor();
     Serial.print("Estado del sensor de llama: ");
     Serial.println(valor);
 
     if (valor && !fuegoDetectado) {
         Serial.println("Llama detectada, enviando alerta.");
-        publish("invernadero/estado", "FUEGO ALERTA");
+        publicar("invernadero/estado", "FUEGO ALERTA");
         fuegoDetectado = true;
     } else if (!valor && fuegoDetectado) {
         Serial.println("No se detecta llama, enviando actualización.");
-        publish("invernadero/estado", "No hay llama");
+        publicar("invernadero/estado", "No hay llama");
         fuegoDetectado = false;
     }
 }
 
-void Invernadero::controlActuadores(bool estado) {
+void Invernadero::controlarActuadores(bool estado) {
     if (estado) {
-        led.parpadear(100);  // Parpadeo indefinido del LED con 100 ms de intervalo
-        buzzer.activar();     // Activa el buzzer
+        led.parpadear(100);
+        buzzer.activar();
     } else {
-        led.apagar();         // Asegura que el LED esté apagado
-        buzzer.desactivar();  // Apaga el buzzer
+        led.apagar();
+        buzzer.desactivar();
     }
 }
 
-bool Invernadero::isConnected() {
-    return client.connected();
+bool Invernadero::estaConectado() {
+    return cliente.connected();
 }
 
-void Invernadero::reconnect(const char* mqttTopic, const char* controlTopic) {
-    while (!client.connected()) {
+void Invernadero::reconectar(const char* topicoMQTT, const char* topicoControl) {
+    while (!cliente.connected()) {
         Serial.print("Intentando reconectar al broker MQTT...");
-        if (client.connect("ESP32_Invernadero")) {
+        if (cliente.connect("ESP32_Invernadero")) {
             Serial.println("Reconexión exitosa.");
-            client.subscribe(controlTopic);
-            publish(mqttTopic, "Conectado");
+            cliente.subscribe(topicoControl);
+            publicar(topicoMQTT, "Conectado");
         } else {
             Serial.print("Error de reconexión. Código: ");
-            Serial.println(client.state());
+            Serial.println(cliente.state());
             delay(2000);
         }
     }

@@ -27,4 +27,3 @@ void LED::parpadear(int tiempo) {
         tiempoAnterior = tiempoActual;
     }
 }
-

@@ -8,9 +8,9 @@ class Sensor {
 
   public:
     Sensor(int pin);
-    bool leer();
-    bool getEstado();
-    void setEstado(bool nuevoEstado);
+    bool leerSensor();
+    bool obtenerEstado();
+    void establecerEstado(bool nuevoEstado);
 };
 
 #endif

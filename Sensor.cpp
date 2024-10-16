@@ -5,15 +5,15 @@ Sensor::Sensor(int pin) : pin(pin), estado(false) {
     pinMode(pin, INPUT);
 }
 
-bool Sensor::leer() {
+bool Sensor::leerSensor() {
     int valor = digitalRead(pin);
     return valor == 0;
 }
 
-bool Sensor::getEstado() {
+bool Sensor::obtenerEstado() {
     return estado;
 }
 
-void Sensor::setEstado(bool nuevoEstado) {
+void Sensor::establecerEstado(bool nuevoEstado) {
     estado = nuevoEstado;
 }

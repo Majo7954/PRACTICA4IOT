@@ -1,61 +1,59 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "Invernadero.h"
+#include "ConexionWiFi.h"
 
-const char* ssid = "Mi 9T Pro";               // Cambia por tu SSID
-const char* password = "boquitapapa";               // Cambia por tu contraseña
-const char* mqttServer = "test.mosquitto.org";   // Ejemplo con otro broker
-const int mqttPort = 1883;                       // Puerto MQTT
-const char* mqttTopic = "invernadero/estado";    // Tema para el estado del sensor
-const char* controlTopic = "invernadero/control";// Tema para recibir comandos
+const char* ssid = "Mi 9T Pro";
+const char* contrasena = "boquitapapa";
+const char* servidorMQTT = "test.mosquitto.org";
+const int puertoMQTT = 1883;
+const char* topicoEstado = "invernadero/estado";
+const char* topicoControl = "invernadero/control";
 
-const char* clientID = "ESP32_Invernadero";      // Cambia por un Client ID único para el ESP32
-bool actuadorActivo = false;                     // Variable para almacenar el estado del actuador
+const char* idCliente = "ESP32_Invernadero";
+bool actuadorActivo = false;
 
-WiFiClient espClient;
-Invernadero invernadero(espClient, 18);          // Instancia de la clase Invernadero
+WiFiClient espCliente;
+Invernadero invernadero(espCliente, 18);
+ConexionWiFi conexionWiFi(ssid, contrasena);
 
-void mqttCallback(char* topic, byte* message, unsigned int length);  // Prototipo del callback
+void callbackMQTT(char* topico, byte* mensaje, unsigned int longitud);
 
 void setup() {
     Serial.begin(115200);
-  
-    // Conexión a Wi-Fi
-    Serial.print("Conectando a Wi-Fi...");
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.println("\nConexión Wi-Fi establecida con éxito.");
-    Serial.print("Dirección IP: ");
-    Serial.println(WiFi.localIP());
 
-    // Configurar el cliente MQTT a través de la clase Invernadero
-    invernadero.setupMQTT(mqttServer, mqttPort, clientID);
-    invernadero.setCallback(mqttCallback);  // Función de callback para mensajes recibidos
+    conexionWiFi.conectar();
+    if (conexionWiFi.estaConectado()) {
+        Serial.println("Conexión Wi-Fi establecida con éxito.");
+        Serial.print("Dirección IP: ");
+        Serial.println(WiFi.localIP());
+    } else {
+        Serial.println("Error al conectar al Wi-Fi.");
+    }
+
+    invernadero.configurarMQTT(servidorMQTT, puertoMQTT, idCliente);
+    invernadero.establecerCallback(callbackMQTT);
 }
 
 void loop() {
-    invernadero.loop();  // Procesa el cliente MQTT y reconecta si es necesario
-    invernadero.checkFireSensor();  // Detecta llama usando el objeto sensor
+    invernadero.ejecutar();
+    invernadero.verificarSensorFuego();
 
-    // Controla los actuadores (LED y Buzzer) basado en el comando recibido desde la app
-    invernadero.controlActuadores(actuadorActivo);  // Utiliza el estado de actuadorActivo
+    invernadero.controlarActuadores(actuadorActivo);
 }
 
-void mqttCallback(char* topic, byte* message, unsigned int length) {
+void callbackMQTT(char* topico, byte* mensaje, unsigned int longitud) {
     String msg;
-    for (int i = 0; i < length; i++) {
-        msg += (char)message[i];
+    for (int i = 0; i < longitud; i++) {
+        msg += (char)mensaje[i];
     }
 
     Serial.print("Mensaje recibido en el tema: ");
-    Serial.print(topic);
+    Serial.print(topico);
     Serial.print(" -> ");
     Serial.println(msg);
 
-    if (String(topic) == controlTopic) {
+    if (String(topico) == topicoControl) {
         if (msg == "ACTIVAR") {
             actuadorActivo = true;
             Serial.println("Actuadores ACTIVADOS.");
