@@ -1,29 +1,34 @@
 #include "LED.h"
 #include <Arduino.h>
 
-LED::LED(int pin) : pin(pin), tiempoAnterior(0), estadoLED(false) {
+LED::LED(int pin) 
+    : pin(pin), state(false), lastBlinkTime(0), blinkInterval(500) {}
+
+void LED::init() {
     pinMode(pin, OUTPUT);
-}
-
-void LED::encender() {
-    digitalWrite(pin, HIGH);
-    estadoLED = true;
-}
-
-void LED::apagar() {
     digitalWrite(pin, LOW);
-    estadoLED = false;
 }
 
-void LED::parpadear(int tiempo) {
-    unsigned long tiempoActual = millis();
+void LED::turnOn() {
+    digitalWrite(pin, HIGH);
+    state = true;
+}
 
-    if (tiempoActual - tiempoAnterior >= tiempo) {
-        if (estadoLED) {
-            apagar();
-        } else {
-            encender();
-        }
-        tiempoAnterior = tiempoActual;
+void LED::turnOff() {
+    digitalWrite(pin, LOW);
+    state = false;
+}
+
+void LED::blink() {
+    if (millis() - lastBlinkTime >= blinkInterval) {
+        state = !state;
+        digitalWrite(pin, state);
+        lastBlinkTime = millis();
+    }
+}
+
+void LED::update() {
+    if (state) {
+        blink();
     }
 }

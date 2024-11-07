@@ -1,17 +1,25 @@
 #ifndef LED_H
 #define LED_H
 
+#include <Arduino.h>
+
 class LED {
-  private:
-    int pin;
-    unsigned long tiempoAnterior;
-    bool estadoLED;
-    
-  public:
+private:
+    const int pin;
+    bool state;
+    unsigned long lastBlinkTime;
+    const unsigned long blinkInterval;
+    bool isBlinking;
+
+public:
     LED(int pin);
-    void encender();
-    void apagar();
-    void parpadear(int tiempo);
+    void init();
+    void turnOn();
+    void turnOff();
+    void blink();
+    void update();
+    bool getState() const { return state; }
+    bool isBlinkActive() const { return isBlinking; }
 };
 
 #endif

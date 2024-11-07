@@ -4,12 +4,16 @@
 class Buzzer {
   private:
     int pin;
+    bool isActive;
+    const int frequency;
 
   public:
     Buzzer(int pin);
-    void activar();
-    void desactivar();
+    void init();
+    void turnOn();
+    void turnOff();
+    void toggle();
+    bool getState() const { return isActive; }
 };
 
 #endif
-
