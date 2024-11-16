@@ -3,16 +3,16 @@
 
 class Buzzer {
 private:
-    int pin;               // Pin conectado al buzzer
-    bool isActive;         // Estado del buzzer (activo o inactivo)
-    int frequency;         // Frecuencia actual del buzzer
+    int pin;
+    bool isActive;
+    int frequency;
 
 public:
     Buzzer(int pin);
     void init();
-    void setFrequency(int freq); // Cambia la frecuencia
-    void turnOn();              // Activa el buzzer
-    void turnOff();             // Apaga el buzzer
+    void setFrequency(int freq);
+    void turnOn();
+    void turnOff();
     bool getState() const { return isActive; }
 };
 

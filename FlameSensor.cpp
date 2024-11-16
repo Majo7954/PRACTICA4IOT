@@ -9,8 +9,8 @@ void FlameSensor::init() {
 }
 
 bool FlameSensor::checkFireDetected() {
-    static unsigned long debounceTime = 1000; // Tiempo mínimo para considerar la detección
-    bool currentReading = !digitalRead(pin);  // Invertir: LOW indica fuego detectado
+    static unsigned long debounceTime = 1000;
+    bool currentReading = !digitalRead(pin);
 
     if (currentReading && millis() - lastReadTime >= debounceTime) {
         lastReading = true;

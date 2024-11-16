@@ -44,7 +44,6 @@ void Greenhouse::checkFlameSensor() {
             alarmActive = true;
             Serial.println("Alarma activada.");
         } else if (!fireDetected && alarmEnabled) {
-            // Mantén la alarma activa hasta que el usuario la desactive manualmente
             alarmActive = false;
             Serial.println("Alarma desactivada.");
         }
@@ -113,16 +112,14 @@ void Greenhouse::handleDeltaMessage(char* payload) {
         return;
     }
     
-    // Procesa los cambios recibidos en el shadow
     JsonObject state = deltaDoc["state"];
     if (state.containsKey("alarmEnabled")) {
         bool alarmSetting = state["alarmEnabled"].as<bool>();
-        setAlarmEnabled(alarmSetting);  // Establece `alarmEnabled`
+        setAlarmEnabled(alarmSetting);
 
-        // Si `alarmEnabled` es `true`, activa `alarmActive` y los actuadores
         if (alarmSetting) {
             alarmActive = true;
-            updateActuators();  // Activa el LED y el buzzer si `alarmEnabled` está activo
+            updateActuators();
         }
     }
 }
@@ -143,10 +140,10 @@ void Greenhouse::handleCallback(char* topic, byte* payload, unsigned int length)
             if (strcmp(command, "activateAlarm") == 0) {
                 alarmEnabled = true;
                 alarmActive = true;
-                updateActuators();  // Activa LED y buzzer
+                updateActuators();
             } else if (strcmp(command, "deactivateAlarm") == 0) {
                 alarmActive = false;
-                updateActuators();  // Desactiva LED y buzzer
+                updateActuators();
             }
         }
     }
@@ -157,13 +154,11 @@ void Greenhouse::reportState() {
     static unsigned long lastReportTime = 0;
     unsigned long currentMillis = millis();
 
-    // Enviar datos cada 10 segundos
     if (currentMillis - lastReportTime >= 10000) {
         outputDoc.clear();
         JsonObject state = outputDoc.createNestedObject("state");
         JsonObject reported = state.createNestedObject("reported");
 
-        // Incluye solo las propiedades relevantes
         reported["alarmEnabled"] = alarmEnabled;
         reported["alarmActive"] = alarmActive;
         reported["fireDetected"] = flameSensor->checkFireDetected();
@@ -173,7 +168,6 @@ void Greenhouse::reportState() {
         serializeJson(outputDoc, outputBuffer);
         mqttClient.publish(updateTopic, outputBuffer);
         
-        // Actualiza el tiempo de último envío
         lastReportTime = currentMillis;
     }
 }

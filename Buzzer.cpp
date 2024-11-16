@@ -6,23 +6,23 @@ Buzzer::Buzzer(int pin)
 
 void Buzzer::init() {
     pinMode(pin, OUTPUT);
-    digitalWrite(pin, LOW); // Asegura que el buzzer esté apagado al inicio
+    digitalWrite(pin, LOW);
 }
 
 void Buzzer::setFrequency(int freq) {
-    frequency = freq; // Actualiza la frecuencia
+    frequency = freq;
 }
 
 void Buzzer::turnOn() {
     if (!isActive) {
         isActive = true;
-        tone(pin, frequency); // Genera un tono en el buzzer
+        tone(pin, frequency);
     }
 }
 
 void Buzzer::turnOff() {
     if (isActive) {
         isActive = false;
-        noTone(pin); // Detiene el tono
+        noTone(pin);
     }
 }

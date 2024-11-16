@@ -4,27 +4,23 @@
 #include "Buzzer.h"
 #include "FlameSensor.h"
 
-// Pin Configuration
 const int LED_PIN = 23;
 const int BUZZER_PIN = 5;
 const int FLAME_SENSOR_PIN = 18;
 
-// Create instances
 LED led(LED_PIN);
 Buzzer buzzer(BUZZER_PIN);
 FlameSensor flameSensor(FLAME_SENSOR_PIN);
 WiFiConnection wifi("Mi 9T Pro", "boquitapapa");
 
-// AWS IoT configuration
 const char* MQTT_BROKER = "a2xkr2m0uy0ejv-ats.iot.us-east-2.amazonaws.com";
 const int MQTT_PORT = 8883;
 const char* CLIENT_ID = "ESP32_FireAlarm";
 
-// Topics for device shadow
-const char* UPDATE_TOPIC = "$aws/things/ESP32/shadow/update";              // publish
-const char* UPDATE_DELTA_TOPIC = "$aws/things/ESP32/shadow/update/delta";  // subscribe
-const char* UPDATE_ACCEPTED_TOPIC = "$aws/things/ESP32/shadow/update/accepted";  // subscribe
-const char* UPDATE_REJECTED_TOPIC = "$aws/things/ESP32/shadow/update/rejected";  // subscribe
+const char* UPDATE_TOPIC = "$aws/things/ESP32/shadow/update";
+const char* UPDATE_DELTA_TOPIC = "$aws/things/ESP32/shadow/update/delta";
+const char* UPDATE_ACCEPTED_TOPIC = "$aws/things/ESP32/shadow/update/accepted";
+const char* UPDATE_REJECTED_TOPIC = "$aws/things/ESP32/shadow/update/rejected"; 
 
 const char AMAZON_ROOT_CA1[] PROGMEM = R"EOF(
 -----BEGIN CERTIFICATE-----
@@ -107,15 +103,12 @@ Greenhouse* greenhouse;
 void setup() {
     Serial.begin(115200);
     
-    // Conectar WiFi y configurar certificados
     wifi.connect();
     wifi.setupAWSCertificates(AMAZON_ROOT_CA1, CERTIFICATE, PRIVATE_KEY);
     
-    // Crear instancia de Greenhouse con soporte para shadows
     greenhouse = new Greenhouse(wifi.getClient(), &led, &buzzer, &flameSensor);
     greenhouse->init();
     
-    // Configurar MQTT con todos los topics necesarios para shadows
     greenhouse->configureMQTT(
       MQTT_BROKER, 
       MQTT_PORT, 
