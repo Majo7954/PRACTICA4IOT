@@ -9,15 +9,19 @@ void FlameSensor::init() {
 }
 
 bool FlameSensor::checkFireDetected() {
-    if (millis() - lastReadTime >= readInterval) {
-        // For a digital flame sensor:
-        // LOW (0) generally indicates fire detected
-        // HIGH (1) means no fire detected
-        lastReading = !digitalRead(pin);  // Invert the reading: true means fire detected
+    static unsigned long debounceTime = 1000; // Tiempo mínimo para considerar la detección
+    bool currentReading = !digitalRead(pin);  // Invertir: LOW indica fuego detectado
+
+    if (currentReading && millis() - lastReadTime >= debounceTime) {
+        lastReading = true;
         lastReadTime = millis();
+    } else if (!currentReading) {
+        lastReading = false;
     }
+
     return lastReading;
 }
+
 
 bool FlameSensor::hasStateChanged() {
     static bool previousState = false;

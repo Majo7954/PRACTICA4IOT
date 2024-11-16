@@ -28,26 +28,45 @@ void Greenhouse::configureMQTT(const char* broker, int port, const char* clientI
     if (!mqttClient.connected()) {
         reconnect(clientId);
     }
+
+    mqttClient.subscribe("ESP32/commands");
 }
+
 
 void Greenhouse::checkFlameSensor() {
     if (flameSensor->hasStateChanged()) {
         bool fireDetected = flameSensor->checkFireDetected();
-        alarmActive = fireDetected && alarmEnabled;
+        Serial.print("Fuego detectado: ");
+        Serial.println(fireDetected);
+
+        if (fireDetected) {
+            alarmEnabled = true;
+            alarmActive = true;
+            Serial.println("Alarma activada.");
+        } else if (!fireDetected && alarmEnabled) {
+            // Mantén la alarma activa hasta que el usuario la desactive manualmente
+            alarmActive = false;
+            Serial.println("Alarma desactivada.");
+        }
+
+        updateActuators();
         reportState();
     }
 }
 
+
+
 void Greenhouse::updateActuators() {
     if (alarmActive && alarmEnabled) {
         led->blink();
+        buzzer->setFrequency(2000);
         buzzer->turnOn();
     } else {
         led->turnOff();
         buzzer->turnOff();
     }
-    reportState();
 }
+
 
 void Greenhouse::setAlarmEnabled(bool enabled) {
     alarmEnabled = enabled;
@@ -115,14 +134,24 @@ void Greenhouse::handleCallback(char* topic, byte* payload, unsigned int length)
     
     if (strcmp(topic, deltaTopic) == 0) {
         handleDeltaMessage(message);
-    }
-    else if (strcmp(topic, acceptedTopic) == 0) {
-        Serial.println("Shadow update accepted");
-    }
-    else if (strcmp(topic, rejectedTopic) == 0) {
-        Serial.println("Shadow update rejected");
+    } else if (strcmp(topic, "ESP32/commands") == 0) {
+        StaticJsonDocument<200> commandDoc;
+        DeserializationError error = deserializeJson(commandDoc, message);
+
+        if (!error) {
+            const char* command = commandDoc["command"];
+            if (strcmp(command, "activateAlarm") == 0) {
+                alarmEnabled = true;
+                alarmActive = true;
+                updateActuators();  // Activa LED y buzzer
+            } else if (strcmp(command, "deactivateAlarm") == 0) {
+                alarmActive = false;
+                updateActuators();  // Desactiva LED y buzzer
+            }
+        }
     }
 }
+
 
 void Greenhouse::reportState() {
     static unsigned long lastReportTime = 0;

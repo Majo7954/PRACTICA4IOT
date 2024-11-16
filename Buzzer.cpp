@@ -1,28 +1,28 @@
 #include "Buzzer.h"
 #include <Arduino.h>
 
-Buzzer::Buzzer(int pin) 
-    : pin(pin), isActive(false), frequency(1000) {}
+Buzzer::Buzzer(int pin)
+    : pin(pin), isActive(false), frequency(2000) {}
 
 void Buzzer::init() {
     pinMode(pin, OUTPUT);
-    noTone(pin);
+    digitalWrite(pin, LOW); // Asegura que el buzzer esté apagado al inicio
+}
+
+void Buzzer::setFrequency(int freq) {
+    frequency = freq; // Actualiza la frecuencia
 }
 
 void Buzzer::turnOn() {
-    tone(pin, frequency);
-    isActive = true;
+    if (!isActive) {
+        isActive = true;
+        tone(pin, frequency); // Genera un tono en el buzzer
+    }
 }
 
 void Buzzer::turnOff() {
-    noTone(pin);
-    isActive = false;
-}
-
-void Buzzer::toggle() {
     if (isActive) {
-        turnOff();
-    } else {
-        turnOn();
+        isActive = false;
+        noTone(pin); // Detiene el tono
     }
 }
