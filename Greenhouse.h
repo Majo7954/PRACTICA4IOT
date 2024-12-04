@@ -6,6 +6,7 @@
 #include "LED.h"
 #include "Buzzer.h"
 #include "FlameSensor.h"
+#include "AirQualitySensor.h"  // Asegúrate de incluir el sensor de calidad de aire
 #include "WiFiConnection.h"
 
 class Greenhouse {
@@ -14,6 +15,7 @@ private:
     LED* led;                         // Controlador LED
     Buzzer* buzzer;                   // Controlador del buzzer
     FlameSensor* flameSensor;         // Sensor de llama
+    AirQualitySensor* airQualitySensor; // Sensor de calidad de aire
     bool alarmEnabled;                // Estado de activación de la alarma
     bool alarmActive;                 // Estado de actividad de la alarma
     StaticJsonDocument<200> outputDoc; // Documento JSON para actualizar el shadow
@@ -25,13 +27,17 @@ private:
     const char* acceptedTopic;
     const char* rejectedTopic;
 
+    // Variables para la publicación periódica de los sensores
+    unsigned long previousMillis;     // Variable para el tiempo de la última publicación
+    const long interval;              // Intervalo para la publicación
+
     // Métodos privados
     void handleDeltaMessage(char* payload);         // Maneja mensajes de delta del shadow
     void handleCallback(char* topic, byte* payload, unsigned int length); // Callback MQTT
 
 public:
     // Constructor
-    Greenhouse(WiFiClientSecure* wifiClient, LED* led, Buzzer* buzzer, FlameSensor* flameSensor);
+    Greenhouse(WiFiClientSecure* wifiClient, LED* led, Buzzer* buzzer, FlameSensor* flameSensor, AirQualitySensor* airQualitySensor);
 
     // Métodos públicos
     void init();                                    // Inicializa el sistema

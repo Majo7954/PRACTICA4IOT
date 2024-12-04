@@ -3,14 +3,18 @@
 #include "LED.h"
 #include "Buzzer.h"
 #include "FlameSensor.h"
+#include "AirQualitySensor.h"  // Incluir la clase de calidad de aire
 
 const int LED_PIN = 23;
 const int BUZZER_PIN = 5;
 const int FLAME_SENSOR_PIN = 18;
+const int AIR_QUALITY_SENSOR_PIN = 4;  // Actualiza el pin para el sensor de calidad de aire
 
+// Crear instancias de sensores y actuadores
 LED led(LED_PIN);
 Buzzer buzzer(BUZZER_PIN);
 FlameSensor flameSensor(FLAME_SENSOR_PIN);
+AirQualitySensor airQualitySensor(AIR_QUALITY_SENSOR_PIN, 900); // Usar pin 4 para el sensor de calidad de aire
 WiFiConnection wifi("Mi 9T Pro", "boquitapapa");
 
 const char* MQTT_BROKER = "a2xkr2m0uy0ejv-ats.iot.us-east-2.amazonaws.com";
@@ -106,7 +110,7 @@ void setup() {
     wifi.connect();
     wifi.setupAWSCertificates(AMAZON_ROOT_CA1, CERTIFICATE, PRIVATE_KEY);
     
-    greenhouse = new Greenhouse(wifi.getClient(), &led, &buzzer, &flameSensor);
+    greenhouse = new Greenhouse(wifi.getClient(), &led, &buzzer, &flameSensor, &airQualitySensor);  // Pasa el sensor de calidad de aire
     greenhouse->init();
     
     greenhouse->configureMQTT(

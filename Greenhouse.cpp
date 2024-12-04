@@ -3,19 +3,22 @@
 unsigned long previousMillis = 0;  // Almacena el tiempo de la última publicación
 const long interval = 5000;  // Intervalo de 5 segundos
 
-Greenhouse::Greenhouse(WiFiClientSecure* wifiClient, LED* led, Buzzer* buzzer, FlameSensor* flameSensor)
-    : mqttClient(*wifiClient), led(led), buzzer(buzzer), flameSensor(flameSensor),
-      alarmEnabled(false), alarmActive(false) {
-    
-    mqttClient.setCallback([this](char* topic, byte* payload, unsigned int length) {
+Greenhouse::Greenhouse(WiFiClientSecure* wifiClient, LED* led, Buzzer* buzzer, 
+                       FlameSensor* flameSensor, AirQualitySensor* airQualitySensor)
+    : mqttClient(*wifiClient), led(led), buzzer(buzzer), flameSensor(flameSensor), 
+      airQualitySensor(airQualitySensor), alarmEnabled(false), alarmActive(false),
+      previousMillis(0), interval(5000) {
+        mqttClient.setCallback([this](char* topic, byte* payload, unsigned int length) {
         this->handleCallback(topic, payload, length);
     });
 }
+
 
 void Greenhouse::init() {
     led->init();
     buzzer->init();
     flameSensor->init();
+    airQualitySensor->init(); // Inicializa el sensor de calidad de aire
 }
 
 void Greenhouse::configureMQTT(const char* broker, int port, const char* clientId, 
@@ -120,6 +123,7 @@ void Greenhouse::reportState() {
     reported["fireDetected"] = flameSensor->checkFireDetected();
     reported["ledState"] = led->getState();    // Obtiene el estado del LED
     reported["buzzerState"] = buzzer->getState();  // Obtiene el estado del Buzzer
+    reported["airQualityState"] = airQualitySensor->readPPM() > 900 ? 1 : 0;  // Calidad de aire
 
     // Serializa el documento JSON y publica el estado al shadow
     serializeJson(outputDoc, outputBuffer);
@@ -139,42 +143,36 @@ void Greenhouse::setAlarmEnabled(bool enabled) {
 }
 
 void Greenhouse::publishSensorData(const char* sensorId, float value, const char* unit) {
-    unsigned long currentMillis = millis();  // Obtiene el tiempo actual
-    
-    // Verifica si han pasado 5 segundos
-    if (currentMillis - previousMillis >= interval) {
-        previousMillis = currentMillis;  // Actualiza el tiempo de la última publicación
-        
-        if (!mqttClient.connected()) {
-            Serial.println("No conectado a MQTT, no se puede publicar.");
-            return;
-        }
-        
-        // Prepara el timestamp
-        char timestamp[25];
-        time_t now = time(nullptr);
-        strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", gmtime(&now));
+    if (!mqttClient.connected()) {
+        Serial.println("No conectado a MQTT, no se puede publicar.");
+        return;
+    }
 
-        // Crear el payload JSON
-        StaticJsonDocument<200> sensorDoc;
-        sensorDoc["SensorID"] = sensorId;
-        sensorDoc["Timestamp"] = timestamp;
-        sensorDoc["Value"] = value;
-        sensorDoc["Unit"] = unit;
+    // Prepara el timestamp
+    char timestamp[25];
+    time_t now = time(nullptr);
+    strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", gmtime(&now));
 
-        // Serializa el JSON y publícalo en el tema MQTT
-        char buffer[256];
-        serializeJson(sensorDoc, buffer);
+    // Crear el payload JSON
+    StaticJsonDocument<200> sensorDoc;
+    sensorDoc["SensorID"] = sensorId;
+    sensorDoc["Timestamp"] = timestamp;
+    sensorDoc["Value"] = value;
+    sensorDoc["Unit"] = unit;
 
-        if (mqttClient.publish("sensors/data", buffer)) {
-            Serial.print("Datos publicados correctamente para ");
-            Serial.println(sensorId);
-        } else {
-            Serial.print("Error publicando datos para ");
-            Serial.println(sensorId);
-        }
+    // Serializa el JSON y publícalo en el tema MQTT
+    char buffer[256];
+    serializeJson(sensorDoc, buffer);
+
+    if (mqttClient.publish("sensors/data", buffer)) {
+        Serial.print("Datos publicados correctamente para ");
+        Serial.println(sensorId);
+    } else {
+        Serial.print("Error publicando datos para ");
+        Serial.println(sensorId);
     }
 }
+
 
 
 void Greenhouse::run() {
@@ -183,19 +181,25 @@ void Greenhouse::run() {
     }
     mqttClient.loop();
 
-    // Verifica y reporta el estado del sensor de llama
-    checkFlameSensor();
+    unsigned long currentMillis = millis();
 
-    // Publicar datos del FlameSensor
-    int flameDetected = flameSensor->checkFireDetected() ? 1 : 0; // 1: fuego detectado, 0: no detectado
-    publishSensorData("FlameSensor", flameDetected, "-");
+    // Verifica si han pasado 5 segundos para publicar datos
+    if (currentMillis - previousMillis >= interval) {
+        previousMillis = currentMillis;  // Actualiza el tiempo de la última publicación
 
-    // Publicar datos de otro sensor (ejemplo: DHT11)
-    //float temperature = dht11.readTemperature();  // Supongamos que tienes una instancia del DHT11
-    //publishSensorData("DHT11", temperature, "Celsius");
+        // Leer y reportar estado del sensor de llama
+        bool fireDetected = flameSensor->checkFireDetected();
+        Serial.print("Sensor de llama detecta fuego: ");
+        Serial.println(fireDetected ? "Sí" : "No");
+        publishSensorData("FlameSensor", fireDetected ? 1.0f : 0.0f, "");  // Publicar datos del sensor de llama
 
-    // Actualiza los actuadores (LED y buzzer)
-    updateActuators();
+        // Leer y reportar estado del sensor de calidad de aire
+        int airQualityPPM = airQualitySensor->readPPM();
+        Serial.print("Calidad de aire (PPM): ");
+        Serial.println(airQualityPPM);
+        publishSensorData("AirQualitySensor", (float)airQualityPPM, "ppm"); // Publicar datos de calidad de aire
+
+        // Actualizar actuadores según el estado
+        updateActuators();
+    }
 }
-
-
